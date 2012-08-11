@@ -1,0 +1,89 @@
+Things to do:
+
+Procedure for file transfer:
+
+	Client to Server:
+		retrieve files, place in tar, copy to destination folder via
+		ssh
+		
+		server:
+		uncompress tarball, gzip all files, tar the compressed files
+		remove old backups if differential is enabled
+	
+	Server to client:
+		To speed up file transfer:
+		Client copies data to itself, extracts the tarball, extracts
+		gzip files, move to desired location.
+
+Issues:
+(RESOLVED) Daemon removes leading /
+	Solution: remove preservation options, the rest will be resolved in
+	the restoration scripts.
+
+Create recovery option
+	Solution: Recovery will consist of the following steps:
+	MBU will invoke daemon with option to update directory list
+	MBU will copy list to setup dir
+	MBU will append incrementing numbers to list
+	MBU will read list into setup
+	MBU will start setup
+	setup will ask user to choose backup files
+	setup will ask user if they want to choose individual files
+	ask user which recovery method to use
+		absolute recovery (add selective option?)
+		selective recovery (isolated)
+	setup will call filemanager with aproprate options
+	filemanager will send file list to client if requested
+		filemanager will start choice.sh
+		choice will ask user for desired files
+		choice will write these to a file
+	setup will call filemanager with -r and the approprate options to
+	recover files
+	filemanager will untar backup files
+	filemanager will ungzip backup files
+	filemanager will copy tarred file to client (location determined by
+	absolute or isolated backup)
+		if absolute, copy to client's root directory
+		if selective, copy to designated folder
+	filemanager will extract the archive
+	filemanager will clean temp directory
+	filemanager will clean tar file
+
+
+Test SSH features
+	connect to personal accounts and confirm SSH functions
+
+Allow user to manually run daemon, and/or backup
+	Solution: daemon can be run at any time without options
+	backup will have to be able to take options to determine which kind of
+	backup to create and temporarily disable time constraints
+
+Add ability to view contents of archive
+	Solution: have a list menu, updated by the daemon, allow user to
+	select (one?) archive, and list the contents.
+
+Add ability to select which files in a archive to recover and which method
+	Solution: Sub catagory of recovery option...
+	use tar to view contents of selected archive, will use components of
+	view archive. then pass through sed to remove .gz extentions from
+	list, selection will be a checklist, then offer option to recover
+	absolutly or islolated recovery. Then extract, uncompress, tar, copy
+	to client specified by absolute or isolated option, uncompress, clean
+	server files.
+
+Use daemon to update backup and setup scripts
+	daemon will update and run all services
+	update will consist of writing directory contents to setup script
+	(primary) in addition, it will run the server file manager discribed
+	later. 
+	
+Rename files
+	Daemon: runs and updates all appropriate scripts on time, if setup is
+	run, run daemon
+	
+	filemanager: creates tarballs, removes tarred files, removes excess
+	files and directories, manages serverside backup and recovery options
+	
+	setup: Coordinates all HID actions, preventing user interference.
+
+Add option to read backup directory list from file

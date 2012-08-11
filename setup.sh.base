@@ -1,0 +1,313 @@
+#!/bin/bash
+set -x
+############################################################
+#Constants
+############################################################
+TITLE="Macklenc's Backup Utility"
+
+	DEST=
+	SOURCE=
+	SCHEDULE=
+
+	sshtest=$(cat config/ssh)
+	if [ -e config/ssh ]
+	then
+		SSH=$sshtest
+		REMOTECOM=$(cat config/remcom)
+		REMOTEUSER=$(cat config/remusr)
+	else
+		dialog --backtitle "$TITLE" --yesno "Are you using remote backup?" 6 60 \
+			2>&1 > /dev/tty
+		SSH=$?
+
+		echo $SSH > config/ssh
+	
+		if [ $SSH -eq 0 ]
+		then
+			REMOTECOM=$(dialog --backtitle "$TITLE" --inputbox "Input server IP or Name:" 8 60 \
+				2>&1 > /dev/tty)
+			REMOTEUSER=$(dialog --backtitle "$TITLE" --inputbox "Input username on server:" 8 60 \
+				2>&1 > /dev/tty)
+		fi
+		echo $REMOTECOM > config/remcom
+		echo $REMOTEUSER > config/remusr
+	fi
+	if [ ! -e config/host ]
+	then
+		dialog --backtitle "$TITLE" --inputbox "Input hostname (no special chars, or numbers):" 8 60 \
+			> /dev/tty 2> config/host
+	fi
+	HOST=$(cat config/host)
+
+		
+mainMenu () 
+{
+test=$(dialog --backtitle "$TITLE" --menu "What would you like to do?" 12 30 22 \
+	"1" "configure backup" \
+	"2" "run backup" \
+	"3" "restore backup" \
+	\
+	2>&1 > /dev/tty)
+
+if [ $? -eq 1 ]
+then
+	resultA=0
+	exit 0
+fi
+	case $test in
+		1)
+			resultB=1
+			;;
+		2)
+			resultC=1
+			;;
+		3)
+			resultD=1
+			;;
+	esac
+}
+
+run() {
+	let lines=8+$(ls *.sh -1 | wc -l)
+	list=$(ls *.sh -1)
+	
+	list=$(echo $list | sed 's/ /\\n/g')
+
+	if [ -z $file ]
+	then
+		file=$(dialog --backtitle "$TITLE" --inputbox "Input desired backup script:\n$list" $lines 60 \
+			2>&1 > /dev/tty)
+	fi
+
+
+	if [ $? -eq 1 ]
+	then
+		resultC=0
+	else
+		bash $file
+		resultC=0
+	fi
+}
+
+restore() {
+	DIRECTORIES=$(cat config/directs)
+	BACKUPDIR=$(cat config/back)
+	REMOTECOM=$(cat config/remcom)
+	REMOTEUSER=$(cat config/remusr)
+
+	#list=$(ssh $REMOTEUSER@$REMOTECOM "cd $BACKUPDIR; ls -1")
+	#lines=$(ssh $REMOTEUSER@$REMOTECOM "cd $BACKUPDIR; ls -1 | wc -l")
+	#let lines=8+$lines
+	#list=$(echo $list | sed 's/ /\\n/g')
+
+	#DEST=$(dialog --backtitle "$TITLE" --inputbox "Choose a file:\n$list" $lines 60 \
+	#2>&1 > /dev/tty)
+	lines=$(cat config/backupList.txt | wc -l)
+	let lines=8+$lines
+	cols=$(cat config/backupList.txt | wc -L)
+	let cols=$cols*2
+	
+	while read line; do n=$((++n)) &&  echo $line|sed -e 's/^/'$(($n))' /' | sed -e 's/$/ off/' ; done < config/backupList.txt | xargs dialog --checklist 'Choose a backup (or more):' $lines $cols 20
+
+	if [ $? = 0 ]
+	then
+		done=1
+	else
+		resultB=0
+	fi
+
+	#temp=$(while read line; do n=$((++n)) &&  echo $line|sed -e 's/^/'$(($n))' /' | sed -e 's/$/ off/' ; done < config/backupList.txt) 
+	#echo $temp > config/backupList2.txt 
+
+	#for opt in $TARBALL
+	#do
+	#	choice=$(echo $opt | sed s/\"//g | grep config/backupList2.txt)
+	#	tar -tvf $choice > temp.txt
+	#	while read line; do n=$((++n)) &&  echo $line|sed -e 's/^/'$(($n))' /' | sed -e 's/$/ off/' ; done < temp.txt | xargs dialog --checklist 'Choose a backup (or more):' $lines $cols 20
+	#
+	#done
+}
+
+configure()
+{
+
+if [ $test -eq 1 ]
+then
+	#config=$(dialog --backtitle "$TITLE" --menu "Select a configuration option:" 12 30 22 \
+	#	"1" "Create backup script" \
+	#	"2" "Edit Script" \
+	#	2>&1 > /dev/tty)
+	#if [ $? -eq 0 ]
+	#then
+	
+		#if [ $config -eq 1 ]
+		#then
+		if [ -e config/back ]
+		then
+			DEST=$(cat config/back)
+			INTERNALDEST=$DEST
+
+		else
+			DEST=$(dialog --backtitle "$TITLE" --inputbox "Input destination directory:" 8 60 \
+				2>&1 > /dev/tty)
+			echo $DEST > config/back
+		#fi
+		fi
+		if [ $? -eq 1 ]
+		then
+			resultB=0
+		else
+			if [ -e config/directs ]
+			then
+				SOURCE=$(cat config/directs)
+			else
+				SOURCE=$(dialog --backtitle "$TITLE" --inputbox "Input source directorys:" 8 60 \
+				2>&1 > /dev/tty)
+				echo $SOURCE > config/directs
+			fi
+
+			if [ $? -eq 1 ]
+			then
+				resultB=0
+			else
+				SCHEDULE=$(dialog --backtitle "$TITLE" --checklist "Choose backup times:" 20 35 20 \
+				1 "Monthly" on \
+				2 "Monthly Incremental" off \
+				3 "Weekly" off \
+				4 "Weekly Incremental" off \
+				5 "Weekly Differential" on \
+				6 "Daily" off \
+				7 "Daily Incremental" off \
+				8 "Daily Differential" on \
+				9 "Hourly" off \
+				10 "Hourly Incremental" off \
+				11 "Hourly Differential" off 2>&1 >/dev/tty)
+				if [ $? = 0 ]
+				then
+					done=1
+				else
+					resultB=0
+				fi
+			fi
+		fi
+
+	#else
+	#	resultB=1
+	#fi
+fi
+}
+
+create()
+{
+	#Create backup shell script and create cron job
+	file=backup-$HOST-$(date +%m.%d.%Y).sh
+	cp ~/setup/backup.base ~/setup/$file
+	echo "*	*	*	*	*	bash ~/setup/$file > ~/setup/backup.log" > cronfile
+	crontab cronfile
+
+	mkdir -p config
+
+	cp mbu.sh.base mbu.sh
+	sed -i s/SSH\=/SSH\=$SSH/g mbu.sh
+
+	if [ $SSH -eq 1 ]
+	then
+		mkdir -p $DEST/$HOST
+	else
+		ssh $REMOTEUSER@$REMOTECOM "mkdir -p $DEST/$HOST"
+	fi
+
+	SOURCE=$(echo "$SOURCE" | sed 's/\//\\\//g')
+	DEST=$(echo "$DEST" | sed 's/\//\\\//g')
+
+	sed -i s/DIRECTORIES\=/DIRECTORIES\=\""$SOURCE"\"/g $file
+	sed -i s/BACKUPDIR\=/BACKUPDIR\=\""$DEST"\"/g $file
+	sed -i s/REMOTECOM\=/REMOTECOM\="$REMOTECOM"/g $file
+	sed -i s/REMOTEUSER\=/REMOTEUSER\="$REMOTEUSER"/g $file
+	sed -i s/SSH\=/SSH\=$SSH/g $file
+
+	#create backup manager
+	cp filemanager.sh.base filemanager.sh
+	sed -i s/COMPUTERNAME\=/COMPUTERNAME\=$HOST/g filemanager.sh
+
+	if [ $SSH -eq 0 ]
+	then
+		cat filemanager.sh | ssh $REMOTEUSER@$REMOTECOM "cat > $INTERNALDEST/filemanager.sh; echo '*	0	*	*	*	bash $INTERNALDEST/filemanager.sh > ~/$INTERNALDEST/backup.log' > cronfile; crontab cronfile"
+	else
+		mv filemanager.sh $INTERNALDEST/
+		echo '*	0	*	*	*	bash $DEST/filemanager.sh' > cronfile; crontab cronfile
+	fi
+
+	rm filemanager.sh
+
+
+	for opt in $SCHEDULE
+	do
+		case $opt in
+			\"1\")
+				sed -i 's/monthly=0/monthly=1/' $file
+				;;
+			\"2\")
+				sed -i 's/monthlyInc=0/monthlyInc=1/' $file
+				;;
+			\"3\")
+				sed -i 's/weekly=0/weekly=1/' $file
+				;;
+			\"4\")
+				sed -i 's/weeklyInc=0/weeklyInc=1/' $file
+				;;
+			\"5\")
+				sed -i 's/weeklyDiff=0/weeklyDiff=1/' $file
+				;;
+			\"6\")
+				sed -i 's/daily=0/daily=1/' $file
+				;;
+			\"7\")
+				sed -i 's/dailyInc=0/dailyInc=1/' $file
+				;;
+			\"8\")
+				sed -i 's/dailyDiff=0/dailyDiff=1/' $file
+				;;
+			\"9\")
+				sed -i 's/hourly=0/hourly=1/' $file
+				;;
+			\"10\")
+				sed -i 's/hourlyInc=0/hourlyInc=1/' $file
+				;;
+			\"11\")
+				sed -i 's/hourlyDiff=0/hourlyDiff=1/' $file
+				;;
+		esac
+	done
+	rm *~
+	rm cronfile
+}
+
+resultA=1
+resultB=0
+resultC=0
+resultD=0
+done=0
+
+while [ $resultA -eq 1 ] 
+do
+	mainMenu
+	if [ $resultB -eq 1 ]
+	then
+		configure
+		if [ $done -eq 1 ]
+		then
+			create
+		fi
+	fi
+	if [ $resultC -eq 1 ]
+	then
+		run
+	fi
+	if [ $resultD -eq 1 ] 
+	then
+		restore
+	fi
+
+done
+exit 0

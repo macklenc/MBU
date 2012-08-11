@@ -1,0 +1,74 @@
+#!/bin/bash
+set -x
+COMPUTERNAME=
+
+hourlyDiff=$(cat $COMPUTERNAME/hourlydiff.dat)
+dailyDiff=$(cat $COMPUTERNAME/dailydiff.dat)
+weeklyDiff=$(cat $COMPUTERNAME/weeklydiff.dat)
+
+if [ "$1" == "" ]
+then
+	
+	mkdir temp 2> /dev/null
+	new=$(ls -1 *.tar)
+	
+	for opt in $new 
+	do 
+		cd temp 
+		tar -xf ../$opt 
+		rm ../$opt
+		tmp=$(echo $opt | sed s/.tar//g)
+		gzip -r *
+		rm ../$tmp.tarball &> /dev/null
+		tar -cf ../$tmp.tarball *
+		rm -r *
+		cd ..
+	done 	
+	rm -r temp
+	
+	if [ hourlyDiff == "true" ]
+	then
+		#number=$(ls -1 *hourly* | wc -l)
+		#if [ $number -ge 24 ]
+		#then
+		#	rm *hourly*
+		#fi
+		find -maxdepth 1 -mtime 1 -name \*hourly\* -exec rm '{}' \;
+	fi
+	
+	if [ dailyDiff == "true" ]
+	then
+		#number=$(ls -1 *daily* | wc -l)
+		#if [ $number -ge 7 ]
+		#then
+		#	rm *daily*
+		#fi
+		find -maxdepth 1 -mtime 7 -name \*daily\* -exec rm '{}' \;
+	fi	
+	
+	if [ weeklyDiff == "true" ]
+	then
+		#number=$(ls -1 *weekly* | wc -l)
+		#if [ $number -ge 4 ]
+		#then
+		#	rm *weekly*
+		#fi
+		find -maxdepth 1 -mtime 31 -name \*weekly\* -exec rm '{}' \;
+	fi
+fi
+
+if [ "$1" == "-u" ]
+then
+	find . -maxdepth 1 -type f -name \*.tarball | sed 's/\.\///g' > list.txt
+fi
+#select(){
+	
+#}
+
+#if [[ $1 == "-r" ]]
+#then
+#	if [ $2 == "-
+#	RECOVER=$3 #entered in quotes
+#	
+#
+#fi

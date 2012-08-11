@@ -1,0 +1,5 @@
+bash test.sh | xargs dialog --checklist 'hello' 20 35 20
+change cron entries
+make directory cleaning function
+create directories as specified in DEST
+

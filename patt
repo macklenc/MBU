@@ -1,0 +1,10 @@
+backup.base
+CHANGELOG
+daemon.sh.base
+filemanager.sh.base
+mbu.sh.base
+mbu.sh.base~
+patt
+setup.sh.base
+test.sh
+test.sh~

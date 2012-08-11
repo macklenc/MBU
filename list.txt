@@ -1,0 +1,13 @@
+backup-Chris-W7-06.15.2012.sh
+backup.base
+backup.log
+CHANGELOG
+daemon.sh.base
+filemanager.sh.base
+list.txt
+mbu.sh
+mbu.sh.base
+notes
+patt
+setup.sh.base
+test.sh
